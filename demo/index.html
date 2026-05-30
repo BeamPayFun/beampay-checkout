@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beam Store — BeamPay Checkout Demo</title>
+    <style>
+      :root { --indigo: #6366f1; --ink: #111827; --muted: #6b7280; --line: #e5e7eb; }
+      * { box-sizing: border-box; }
+      body {
+        font-family: system-ui, -apple-system, sans-serif; color: var(--ink);
+        margin: 0; background: #f3f4f6; line-height: 1.5;
+      }
+      header {
+        background: white; border-bottom: 1px solid var(--line);
+        padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+      }
+      header h1 { font-size: 18px; margin: 0; }
+      header .net { font-size: 12px; color: var(--muted); }
+      main { max-width: 880px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+      .card h2 { font-size: 15px; margin: 0 0 12px; }
+      .product { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+      .product:last-child { border-bottom: none; }
+      .product .price { font-weight: 600; }
+      .qty { display: flex; gap: 6px; align-items: center; }
+      .qty button { width: 26px; height: 26px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; }
+      .total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; margin-top: 12px; }
+      label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+      input, textarea {
+        width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+        font-size: 13px; font-family: ui-monospace, monospace;
+      }
+      textarea { min-height: 84px; resize: vertical; }
+      button.act {
+        margin-top: 12px; background: var(--indigo); color: white; border: none;
+        border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
+      }
+      button.act.ghost { background: white; color: var(--indigo); border: 1px solid var(--indigo); }
+      button.act:disabled { opacity: 0.5; cursor: not-allowed; }
+      a.linkbtn { display: inline-block; margin-top: 12px; font-size: 13px; color: var(--indigo); }
+      .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+      .pay-row { margin-top: 16px; }
+      #status { font-size: 13px; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
+      .ok { color: #059669; } .bad { color: #dc2626; }
+      code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>⚡ Beam Store</h1>
+      <span class="net">BeamPay Checkout demo · BSC Testnet</span>
+    </header>
+    <main>
+      <div class="grid">
+        <section class="card">
+          <h2>Cart</h2>
+          <div id="products"></div>
+          <div class="total"><span>Total</span><span id="total">0 tUSDT</span></div>
+          <button class="act ghost" id="faucet">Get test tUSDT</button>
+          <div class="hint" id="faucet-hint">Mints mock tUSDT to your wallet so you can pay.</div>
+        </section>
+
+        <section class="card">
+          <h2>1 · Merchant — sign the order</h2>
+          <p class="hint">
+            The merchant signs an EIP-712 order at BeamPay
+            <code>/create</code> and pastes the resulting pay link below. The widget never signs —
+            it only submits the buyer's payment.
+          </p>
+          <label>Merchant / receiver address</label>
+          <input id="merchant" placeholder="0x… (the wallet that gets paid)" />
+          <a class="linkbtn" id="createlink" target="_blank" rel="noreferrer">Open /create to sign ↗</a>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>2 · Buyer — pay with the widget</h2>
+        <label>Paste the signed pay link (from /create)</label>
+        <textarea id="paylink" placeholder="http://localhost:3002/pay?chain=bsc-testnet&merchant=0x…&receiver=0x…&token=0x…&amount=…&orderId=0x…&signer=0x…&createdAt=…&expiresAt=…&sig=0x…"></textarea>
+        <button class="act" id="load">Load order into widget</button>
+        <div class="pay-row"><div id="pay"></div></div>
+        <div id="status"></div>
+      </section>
+    </main>
+    <script type="module" src="/demo/main.ts"></script>
+  </body>
+</html>

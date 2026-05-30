@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/*
+ * Shadow-DOM scoped Tailwind stylesheet.
+ * Compiled by @tailwindcss/vite and injected inline into each shadow root.
+ * All host-page styles are isolated by shadow DOM — no leakage in either direction.
+ */
+
+/* Base resets scoped to shadow DOM */
+:host {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}

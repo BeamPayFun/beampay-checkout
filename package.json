@@ -1,0 +1,58 @@
+{
+  "name": "@beampay/checkout",
+  "version": "1.0.0",
+  "description": "Framework-agnostic embeddable checkout widget for BeamPay",
+  "type": "module",
+  "main": "./dist/checkout.iife.js",
+  "module": "./dist/checkout.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/checkout.es.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsc --emitDeclarationOnly --declaration --outDir dist",
+    "preview": "vite preview",
+    "lint": "biome check src e2e",
+    "fix": "biome check --write src e2e",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "release:bundle": "echo 'TODO: upload dist/checkout.iife.js to Cloudflare R2 beam-cdn/checkout/v1.js'",
+    "release:npm": "echo 'TODO: npm publish --access public'"
+  },
+  "dependencies": {
+    "@beampay/contracts-abi": "^0.2.1",
+    "@wagmi/connectors": "^5.1",
+    "@wagmi/core": "^2.16",
+    "@walletconnect/ethereum-provider": "^2.17",
+    "lit": "^3",
+    "viem": "^2.21",
+    "zod": "^3.23"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9",
+    "@playwright/test": "^1.48",
+    "@tailwindcss/vite": "^4",
+    "jsdom": "^29.1.1",
+    "tailwindcss": "^4",
+    "typescript": "^5.7",
+    "vite": "^6",
+    "vite-plugin-dts": "^4",
+    "vitest": "^2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BeamPayFun/beampay-checkout"
+  }
+}
