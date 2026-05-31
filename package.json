@@ -1,6 +1,6 @@
 {
   "name": "@beampay/checkout",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Framework-agnostic embeddable checkout widget for BeamPay",
   "type": "module",
   "main": "./dist/checkout.iife.js",
