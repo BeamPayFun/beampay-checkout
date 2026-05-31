@@ -28,7 +28,7 @@
     "release:npm": "echo 'TODO: npm publish --access public'"
   },
   "dependencies": {
-    "@beampay/contracts-abi": "^0.2.1",
+    "@beampay/contracts-abi": "^0.3.0",
     "@wagmi/connectors": "^5.1",
     "@wagmi/core": "^2.16",
     "@walletconnect/ethereum-provider": "^2.17",

@@ -1,4 +1,4 @@
-import { BEAM_PAY_ROUTER_ADDRESSES, BeamPayRouterAbi } from '@beampay/contracts-abi'
+import { BEAMPAY_ROUTER_ADDRESSES, BeamPayRouterAbi } from '@beampay/contracts-abi'
 import { readContract } from '@wagmi/core'
 import type { Config } from '@wagmi/core'
 import type { Address, Hex } from 'viem'
@@ -8,7 +8,7 @@ import type { BeamPayCheckoutOptions } from '../types'
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000' as const
 
 export function getRouterAddress(chain: ChainKey): Address {
-  const addr = BEAM_PAY_ROUTER_ADDRESSES[chain] as Address | undefined
+  const addr = BEAMPAY_ROUTER_ADDRESSES[chain] as Address | undefined
   if (!addr || addr === ZERO_ADDR) {
     throw new Error(`BeamPayRouter address for ${chain} is not configured`)
   }
