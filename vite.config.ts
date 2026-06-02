@@ -3,15 +3,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-  ],
+  plugins: [tailwindcss()],
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'BeamPay',
       formats: ['iife', 'es'],
-      fileName: (fmt) => fmt === 'iife' ? 'checkout.iife.js' : 'checkout.es.js',
+      fileName: (fmt) => (fmt === 'iife' ? 'checkout.iife.js' : 'checkout.es.js'),
     },
     rollupOptions: {
       output: {

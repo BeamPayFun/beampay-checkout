@@ -48,8 +48,8 @@ export type CheckoutOptions = BeamPayCheckoutOptions
 export type OrderState = 'pending' | 'paid' | 'failed' | 'expired' | 'refunded'
 
 export interface OrderStatus {
-  /** Derived order key (keccak256 of chain+merchant+token+amount+payer) */
-  orderKey: Hex
+  /** Contract event orderId (merchant-chosen bytes32) — the on-chain pay/refund param. */
+  orderId: Hex
   chain: string
   merchant: Address
   token: Address

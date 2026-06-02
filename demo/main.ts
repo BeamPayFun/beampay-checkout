@@ -164,7 +164,9 @@ function loadOrder() {
     return
   }
   const decimals = opts.decimals ?? 18
-  setStatus(`Order loaded: ${formatUnits(BigInt(opts.amount), decimals)} ${opts.symbol ?? ''} → ${opts.receiver}`)
+  setStatus(
+    `Order loaded: ${formatUnits(BigInt(opts.amount), decimals)} ${opts.symbol ?? ''} → ${opts.receiver}`,
+  )
 
   // Fresh mount target each time (mount() replaces the node it's given).
   const row = $('.pay-row')
