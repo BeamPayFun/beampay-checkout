@@ -85,7 +85,7 @@ export async function runPayment(
   }
 
   return {
-    orderKey: opts.orderId,
+    orderId: opts.orderId,
     chain,
     merchant: opts.merchant,
     token: opts.token,
