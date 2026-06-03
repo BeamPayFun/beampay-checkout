@@ -21,7 +21,7 @@ End-to-end flow:
 
 1. Connect MetaMask on **BSC Testnet (97)** and click **Get test tUSDT** (faucet).
 2. Fill the merchant/receiver address, click **Open /create to sign** — sign the order in
-   beampay-web (defaults to `http://localhost:3002/create`; override with `VITE_CREATE_URL`).
+   beampay-web (defaults to `https://app.beampay.fun/create`; override with `VITE_CREATE_URL`).
 3. Copy the generated pay link, paste it into the store, click **Load order into widget**.
 4. Click **Pay with BeamPay** → approve tUSDT → confirm → the success screen links to the
    `testnet.bscscan.com` transaction.

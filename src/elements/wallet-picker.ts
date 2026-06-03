@@ -1,4 +1,4 @@
-import { type Config, connect } from '@wagmi/core'
+import { type Config, connect, getAccount } from '@wagmi/core'
 import { LitElement, css, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 
@@ -62,6 +62,13 @@ export class WalletPicker extends LitElement {
 
   private async connectWith(connectorType: 'injected' | 'walletConnect') {
     if (!this.config || this.connecting) return
+    // Already connected (config persists, or same wallet signed) — proceed.
+    if (getAccount(this.config).isConnected) {
+      this.dispatchEvent(
+        new CustomEvent('beam-wallet-connected', { bubbles: true, composed: true }),
+      )
+      return
+    }
     const connector = this.config.connectors.find((c) => c.type === connectorType)
     if (!connector) {
       this.errorMsg = 'No matching wallet connector configured'
