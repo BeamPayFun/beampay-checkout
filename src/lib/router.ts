@@ -3,7 +3,7 @@ import { readContract } from '@wagmi/core'
 import type { Config } from '@wagmi/core'
 import type { Address, Hex } from 'viem'
 import { type ChainKey, isNativeAddress } from '../chains'
-import type { BeamPayCheckoutOptions } from '../types'
+import type { PayableOrder } from '../types'
 
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000' as const
 
@@ -44,7 +44,7 @@ export const erc20Abi = [
  * deployed signature: pay(merchant, receiver, token, amount, orderId, signer,
  * createdAt, expiresAt, signature). Native path attaches msg.value = amount.
  */
-export function buildPayRequest(chain: ChainKey, opts: BeamPayCheckoutOptions) {
+export function buildPayRequest(chain: ChainKey, opts: PayableOrder) {
   const amount = BigInt(opts.amount)
   const isNative = isNativeAddress(opts.token)
   return {

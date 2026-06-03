@@ -1,14 +1,16 @@
+import type { OrderEnvelope } from '@beampay/schemas'
 import { type Config, getAccount } from '@wagmi/core'
 import { LitElement, css, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { formatUnits } from 'viem'
 import { type ChainKey, explorerTxUrl, isChainKey } from '../chains'
 import { type PayStep, runPayment } from '../controllers/pay-controller'
+import { resolveOrder, toPayableOrder } from '../controllers/resolve'
 import './wallet-picker'
 import './status-screen'
-import type { CheckoutOptions, OrderStatus } from '../types'
+import type { CheckoutInit, OrderStatus, PayableOrder } from '../types'
 
-type Step = 'connect' | 'confirm' | 'pending' | 'success' | 'error'
+type Step = 'preparing' | 'connect' | 'confirm' | 'pending' | 'success' | 'error'
 
 const STEP_LABEL: Record<PayStep, string> = {
   switching: 'Switching network…',
@@ -19,12 +21,14 @@ const STEP_LABEL: Record<PayStep, string> = {
 
 @customElement('beam-pay-modal')
 export class PayModal extends LitElement {
-  @property({ attribute: false }) opts?: CheckoutOptions
+  @property({ attribute: false }) init?: CheckoutInit
   @property({ attribute: false }) config?: Config
-  @state() private step: Step = 'connect'
+  @state() private step: Step = 'preparing'
   @state() private progress = ''
   @state() private errorMsg = ''
   @state() private order?: OrderStatus
+  @state() private env?: OrderEnvelope
+  private payable?: PayableOrder
 
   static override styles = css`
     :host {
@@ -55,10 +59,25 @@ export class PayModal extends LitElement {
 
   override connectedCallback() {
     super.connectedCallback()
-    // Wallet already connected (e.g. same wallet signed the order) — skip the
-    // picker and go straight to payment confirmation.
-    if (this.config && getAccount(this.config).isConnected) {
-      this.step = 'confirm'
+    void this.prepare()
+  }
+
+  /** Resolve the order source (inline / link / callback) before showing payment. */
+  private async prepare() {
+    if (!this.init) {
+      this.errorMsg = 'BeamPay: missing options'
+      this.step = 'error'
+      return
+    }
+    this.step = 'preparing'
+    try {
+      const env = await resolveOrder(this.init)
+      this.env = env
+      this.payable = toPayableOrder(env)
+      // Wallet already connected (e.g. same wallet signed the order) — skip the picker.
+      this.step = this.config && getAccount(this.config).isConnected ? 'confirm' : 'connect'
+    } catch (err) {
+      this.fail(err)
     }
   }
 
@@ -67,10 +86,10 @@ export class PayModal extends LitElement {
   }
 
   private get amountLabel() {
-    if (!this.opts) return ''
-    const decimals = this.opts.decimals ?? 18
-    const formatted = formatUnits(BigInt(this.opts.amount), decimals)
-    return `${formatted} ${this.opts.symbol ?? ''}`.trim()
+    if (!this.env) return ''
+    const decimals = this.init?.decimals ?? 18
+    const formatted = formatUnits(BigInt(this.env.amount), decimals)
+    return `${formatted} ${this.init?.symbol ?? ''}`.trim()
   }
 
   override render() {
@@ -78,10 +97,15 @@ export class PayModal extends LitElement {
       <div class="modal" role="dialog" aria-modal="true">
         <button class="close" @click=${this.close} aria-label="Close">×</button>
         <h2>Pay with BeamPay</h2>
-        <div class="summary">
-          <span>Amount due</span>
-          <span class="amount">${this.amountLabel}</span>
-        </div>
+        ${
+          this.env
+            ? html`<div class="summary">
+                <span>Amount due</span>
+                <span class="amount">${this.amountLabel}</span>
+              </div>`
+            : ''
+        }
+        ${this.step === 'preparing' ? this.renderPreparing() : ''}
         ${this.step === 'connect' ? this.renderConnect() : ''}
         ${this.step === 'confirm' ? this.renderConfirm() : ''}
         ${this.step === 'pending' ? this.renderPending() : ''}
@@ -89,6 +113,13 @@ export class PayModal extends LitElement {
         ${this.step === 'error' ? this.renderError() : ''}
       </div>
     `
+  }
+
+  private renderPreparing() {
+    return html`<beam-status-screen
+      state="pending"
+      .message=${'Preparing order…'}
+    ></beam-status-screen>`
   }
 
   private renderConnect() {
@@ -128,8 +159,8 @@ export class PayModal extends LitElement {
   }
 
   private renderTxLink() {
-    if (!this.order?.txHash || !this.opts || !isChainKey(this.opts.chain)) return ''
-    const chain: ChainKey = this.opts.chain
+    if (!this.order?.txHash || !this.env || !isChainKey(this.env.chain)) return ''
+    const chain: ChainKey = this.env.chain
     return html`<a
       class="txlink"
       href=${explorerTxUrl(chain, this.order.txHash)}
@@ -139,16 +170,27 @@ export class PayModal extends LitElement {
     >`
   }
 
+  private fail(err: unknown) {
+    this.errorMsg = err instanceof Error ? err.message : String(err)
+    this.step = 'error'
+    this.dispatchEvent(
+      new CustomEvent('beam-pay-error', {
+        detail: err instanceof Error ? err : new Error(this.errorMsg),
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
   private submitPayment = async () => {
-    if (!this.config || !this.opts) {
-      this.errorMsg = 'BeamPay: missing config or options'
-      this.step = 'error'
+    if (!this.config || !this.payable) {
+      this.fail(new Error('BeamPay: missing config or order'))
       return
     }
     this.step = 'pending'
     this.progress = STEP_LABEL.confirming
     try {
-      const order = await runPayment(this.config, this.opts, (s) => {
+      const order = await runPayment(this.config, this.payable, (s) => {
         this.progress = STEP_LABEL[s]
       })
       this.order = order
@@ -157,15 +199,7 @@ export class PayModal extends LitElement {
         new CustomEvent('beam-pay-success', { detail: order, bubbles: true, composed: true }),
       )
     } catch (err) {
-      this.errorMsg = err instanceof Error ? err.message : String(err)
-      this.step = 'error'
-      this.dispatchEvent(
-        new CustomEvent('beam-pay-error', {
-          detail: err instanceof Error ? err : new Error(this.errorMsg),
-          bubbles: true,
-          composed: true,
-        }),
-      )
+      this.fail(err)
     }
   }
 }

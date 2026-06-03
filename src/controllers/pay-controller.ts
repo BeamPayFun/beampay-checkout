@@ -14,7 +14,7 @@ import {
   readAllowance,
   readOrderPayer,
 } from '../lib/router'
-import type { CheckoutOptions, OrderStatus } from '../types'
+import type { CheckoutInit, OrderStatus, PayableOrder } from '../types'
 import { getWagmiConfig } from './wagmi-config'
 
 export type PayStep = 'switching' | 'approving' | 'confirming' | 'pending'
@@ -36,7 +36,7 @@ const VIEM_CHAIN = { bsc, ethereum: mainnet, 'bsc-testnet': bscTestnet } as cons
  */
 export async function runPayment(
   config: Config,
-  opts: CheckoutOptions,
+  opts: PayableOrder,
   onStep: (step: PayStep) => void,
 ): Promise<OrderStatus> {
   if (!isChainKey(opts.chain)) {
@@ -98,13 +98,13 @@ export async function runPayment(
 }
 
 export class BeamPayCheckout {
-  private opts: CheckoutOptions
+  private init: CheckoutInit
   private root: HTMLElement | null = null
   readonly config: Config
 
-  constructor(opts: CheckoutOptions) {
-    this.opts = opts
-    this.config = getWagmiConfig(opts.wcProjectId)
+  constructor(init: CheckoutInit) {
+    this.init = init
+    this.config = getWagmiConfig(init.wcProjectId)
   }
 
   mount(selector: string | HTMLElement): this {
@@ -116,10 +116,7 @@ export class BeamPayCheckout {
     import('../elements/pay-button')
     import('../elements/pay-modal')
 
-    const button = document.createElement('beam-pay-button') as HTMLElement & {
-      opts?: CheckoutOptions
-    }
-    button.opts = this.opts
+    const button = document.createElement('beam-pay-button')
     button.addEventListener('beam-pay-click', () => this.openModal())
     this.root.replaceWith(button)
     this.root = button
@@ -129,17 +126,17 @@ export class BeamPayCheckout {
 
   private openModal() {
     const modal = document.createElement('beam-pay-modal') as HTMLElement & {
-      opts?: CheckoutOptions
+      init?: CheckoutInit
       config?: Config
     }
-    modal.opts = this.opts
+    modal.init = this.init
     modal.config = this.config
     modal.addEventListener('beam-pay-success', (e: Event) => {
-      this.opts.onSuccess?.((e as CustomEvent<OrderStatus>).detail)
+      this.init.onSuccess?.((e as CustomEvent<OrderStatus>).detail)
       modal.remove()
     })
     modal.addEventListener('beam-pay-error', (e: Event) => {
-      this.opts.onError?.((e as CustomEvent<Error>).detail)
+      this.init.onError?.((e as CustomEvent<Error>).detail)
       modal.remove()
     })
     modal.addEventListener('beam-pay-close', () => modal.remove())

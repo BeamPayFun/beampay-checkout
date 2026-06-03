@@ -1,7 +1,7 @@
 import type { Chain } from 'viem'
 import { bsc, bscTestnet, mainnet } from 'viem/chains'
 
-/** Chain keys accepted in BeamPayCheckoutOptions.chain — mirrors beampay-web. */
+/** Chain keys accepted in an OrderEnvelope.chain — mirrors beampay-web. */
 export type ChainKey = 'bsc' | 'ethereum' | 'bsc-testnet'
 
 export const SUPPORTED_CHAINS: Record<ChainKey, Chain> = {

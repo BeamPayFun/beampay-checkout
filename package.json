@@ -1,6 +1,6 @@
 {
   "name": "@beampay/checkout",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Framework-agnostic embeddable checkout widget for BeamPay",
   "type": "module",
   "main": "./dist/checkout.iife.js",
@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@beampay/contracts-abi": "^0.3.0",
+    "@beampay/schemas": "^0.9.0",
     "@wagmi/connectors": "^5.1",
     "@wagmi/core": "^2.16",
     "@walletconnect/ethereum-provider": "^2.17",
