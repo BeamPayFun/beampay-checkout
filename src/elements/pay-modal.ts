@@ -1,4 +1,4 @@
-import type { Config } from '@wagmi/core'
+import { type Config, getAccount } from '@wagmi/core'
 import { LitElement, css, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { formatUnits } from 'viem'
@@ -52,6 +52,15 @@ export class PayModal extends LitElement {
     button.primary:hover { background: #4f46e5; }
     .txlink { display: block; margin-top: 12px; font-size: 13px; color: #6366f1; text-align: center; }
   `
+
+  override connectedCallback() {
+    super.connectedCallback()
+    // Wallet already connected (e.g. same wallet signed the order) — skip the
+    // picker and go straight to payment confirmation.
+    if (this.config && getAccount(this.config).isConnected) {
+      this.step = 'confirm'
+    }
+  }
 
   private close() {
     this.dispatchEvent(new CustomEvent('beam-pay-close', { bubbles: true, composed: true }))

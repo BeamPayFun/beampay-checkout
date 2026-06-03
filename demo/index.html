@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Beam Store — BeamPay Checkout Demo</title>
     <style>
-      :root { --indigo: #6366f1; --ink: #111827; --muted: #6b7280; --line: #e5e7eb; }
+      :root {
+        --indigo: #6366f1; --buyer: #6366f1; --merchant: #d97706;
+        --ink: #111827; --muted: #6b7280; --line: #e5e7eb;
+      }
       * { box-sizing: border-box; }
       body {
         font-family: system-ui, -apple-system, sans-serif; color: var(--ink);
@@ -16,9 +19,14 @@
         padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
       }
       header h1 { font-size: 18px; margin: 0; }
+      header .hgroup { display: flex; align-items: center; gap: 14px; }
       header .net { font-size: 12px; color: var(--muted); }
-      main { max-width: 880px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
-      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      #lang-toggle {
+        font-size: 12px; font-weight: 600; cursor: pointer;
+        background: white; color: var(--indigo); border: 1px solid var(--indigo);
+        border-radius: 6px; padding: 4px 10px;
+      }
+      main { max-width: 940px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
       .card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
       .card h2 { font-size: 15px; margin: 0 0 12px; }
       .product { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -26,63 +34,104 @@
       .product .price { font-weight: 600; }
       .qty { display: flex; gap: 6px; align-items: center; }
       .qty button { width: 26px; height: 26px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; }
+      .qty button:disabled { opacity: 0.4; cursor: not-allowed; }
       .total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; margin-top: 12px; }
       label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
-      input, textarea {
-        width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
-        font-size: 13px; font-family: ui-monospace, monospace;
-      }
-      textarea { min-height: 84px; resize: vertical; }
       button.act {
         margin-top: 12px; background: var(--indigo); color: white; border: none;
         border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
       }
       button.act.ghost { background: white; color: var(--indigo); border: 1px solid var(--indigo); }
-      button.act:disabled { opacity: 0.5; cursor: not-allowed; }
-      a.linkbtn { display: inline-block; margin-top: 12px; font-size: 13px; color: var(--indigo); }
+      button.act.merchant-btn { background: var(--merchant); }
+      button.act:disabled { opacity: 0.45; cursor: not-allowed; }
       .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
       .pay-row { margin-top: 16px; }
       #status { font-size: 13px; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
       .ok { color: #059669; } .bad { color: #dc2626; }
       code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+      /* ── stepped two-column flow ── */
+      .flow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; align-items: start; }
+      #step1 { grid-column: 1; grid-row: 1; }
+      #step2 { grid-column: 2; grid-row: 2; }
+      #step3 { grid-column: 1; grid-row: 3; }
+      .step { position: relative; transition: opacity .2s, box-shadow .2s; border-top: 3px solid var(--line); }
+      .step.buyer { border-top-color: var(--buyer); }
+      .step.merchant { border-top-color: var(--merchant); }
+      .step.locked { opacity: 0.5; }
+      .step.active { box-shadow: 0 4px 18px rgba(99,102,241,.12); }
+      .step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+      .badge { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+               padding: 2px 7px; border-radius: 999px; }
+      .badge.buyer { background: #eef2ff; color: var(--buyer); }
+      .badge.merchant { background: #fef3c7; color: var(--merchant); }
+      .step-no { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+      .summary { margin-top: 12px; font-size: 12px; font-family: ui-monospace, monospace;
+                 background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 10px; word-break: break-all; }
+      .summary .k { color: var(--muted); }
+      .summary.empty { display: none; }
+      .pay-addr { margin-top: 4px; font-size: 12px; font-family: ui-monospace, monospace;
+                  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; word-break: break-all; }
+      .pay-addr.empty { display: none; }
+
+      @media (max-width: 680px) {
+        .flow { grid-template-columns: 1fr; }
+        #step1, #step2, #step3 { grid-column: 1; grid-row: auto; }
+      }
     </style>
   </head>
   <body>
     <header>
       <h1>⚡ Beam Store</h1>
-      <span class="net">BeamPay Checkout demo · BSC Testnet</span>
+      <div class="hgroup">
+        <span class="net" data-i18n="tagline">BeamPay Checkout demo · BSC Testnet</span>
+        <button id="lang-toggle">中文</button>
+      </div>
     </header>
     <main>
-      <div class="grid">
-        <section class="card">
-          <h2>Cart</h2>
-          <div id="products"></div>
-          <div class="total"><span>Total</span><span id="total">0 tUSDT</span></div>
-          <button class="act ghost" id="faucet">Get test tUSDT</button>
-          <div class="hint" id="faucet-hint">Mints mock tUSDT to your wallet so you can pay.</div>
+      <!-- ── Cart (full width) ── -->
+      <section class="card">
+        <h2 data-i18n="cart">Cart</h2>
+        <div id="products"></div>
+        <div class="total"><span data-i18n="total">Total</span><span id="total">0 tUSDT</span></div>
+        <button class="act ghost" id="faucet" data-i18n="faucet">Get test tUSDT</button>
+        <div class="hint" id="faucet-hint" data-i18n="faucet_hint">Mints mock tUSDT to your wallet so you can pay.</div>
+        <div class="hint">
+          <a href="https://www.bnbchain.org/en/testnet-faucet" target="_blank" rel="noreferrer" data-i18n="faucet_bnb">Get tBNB (gas) ↗</a>
+        </div>
+      </section>
+
+      <!-- ── Stepped flow: buyer (left) ↔ merchant (right) ── -->
+      <div class="flow">
+        <!-- Step 1 · buyer · row 1 -->
+        <section class="card step buyer active" id="step1">
+          <div class="step-head"><span class="badge buyer" data-i18n="buyer">Buyer</span><span class="step-no">Step 1</span></div>
+          <h2 data-i18n="s1_title">Place order</h2>
+          <p class="hint" data-i18n="s1_hint">Confirm the cart and generate order params (chain / token / amount / orderId). Then hand off to the merchant to sign.</p>
+          <button class="act" id="place-order" data-i18n="place_order">Place order</button>
+          <button class="act ghost" id="reset" style="display:none" data-i18n="reset">↻ New order</button>
+          <div class="summary empty" id="order-summary"></div>
         </section>
 
-        <section class="card">
-          <h2>1 · Merchant — sign the order</h2>
-          <p class="hint">
-            The merchant signs an EIP-712 order at BeamPay
-            <code>/create</code> and pastes the resulting pay link below. The widget never signs —
-            it only submits the buyer's payment.
-          </p>
-          <label>Merchant / receiver address</label>
-          <input id="merchant" placeholder="0x… (the wallet that gets paid)" />
-          <a class="linkbtn" id="createlink" target="_blank" rel="noreferrer">Open /create to sign ↗</a>
+        <!-- Step 2 · merchant · row 2 -->
+        <section class="card step merchant locked" id="step2">
+          <div class="step-head"><span class="badge merchant" data-i18n="merchant">Merchant</span><span class="step-no">Step 2</span></div>
+          <h2 data-i18n="s2_title">Sign order</h2>
+          <p class="hint" data-i18n="s2_hint">Merchant connects a wallet and signs the EIP-712 Order. The connected wallet is merchant / receiver / signer.</p>
+          <button class="act merchant-btn" id="sign-order" disabled data-i18n="sign_order">Connect wallet & sign</button>
+          <div class="summary empty" id="sign-summary"></div>
+        </section>
+
+        <!-- Step 3 · buyer · row 3 -->
+        <section class="card step buyer locked" id="step3">
+          <div class="step-head"><span class="badge buyer" data-i18n="buyer">Buyer</span><span class="step-no">Step 3</span></div>
+          <h2 data-i18n="s3_title">Pay</h2>
+          <p class="hint" data-i18n="s3_hint">Shows the payout address; connect a wallet to complete payment.</p>
+          <div class="pay-addr empty" id="pay-addr"></div>
+          <div class="pay-row"><div id="pay"></div></div>
+          <div id="status"></div>
         </section>
       </div>
-
-      <section class="card">
-        <h2>2 · Buyer — pay with the widget</h2>
-        <label>Paste the signed pay link (from /create)</label>
-        <textarea id="paylink" placeholder="http://localhost:3002/pay?chain=bsc-testnet&merchant=0x…&receiver=0x…&token=0x…&amount=…&orderId=0x…&signer=0x…&createdAt=…&expiresAt=…&sig=0x…"></textarea>
-        <button class="act" id="load">Load order into widget</button>
-        <div class="pay-row"><div id="pay"></div></div>
-        <div id="status"></div>
-      </section>
     </main>
     <script type="module" src="/demo/main.ts"></script>
   </body>
