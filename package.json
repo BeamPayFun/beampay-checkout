@@ -1,6 +1,6 @@
 {
   "name": "@beampay/checkout",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Framework-agnostic embeddable checkout widget for BeamPay",
   "type": "module",
   "main": "./dist/checkout.iife.js",
@@ -12,7 +12,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build && tsc --emitDeclarationOnly --declaration --outDir dist",
