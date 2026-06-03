@@ -1,68 +1,63 @@
 # Beam Store — BeamPay Checkout demo
 
-A fake storefront that demonstrates the `@beampay/checkout` widget end-to-end on
-**BSC testnet**, for both roles:
+A fake storefront that exercises the `@beampay/checkout` widget end-to-end on
+**BSC testnet**, across all three integration modes. Orders are signed by a
+**self-hosted merchant signer** (`examples/demo-signer` in beampay-libs) — the
+widget never signs, and BeamPay holds zero keys.
 
-- **Merchant** signs an EIP-712 order at beampay-web `/create` and gets a pay link.
-- **Buyer** pastes that link into the store and pays through the real widget.
+## Modes
 
-The widget submits a real `pay()` transaction and polls `getOrder()` on-chain — **no
-backend required**.
+| Mode | Flow | What the demo does |
+|---|---|---|
+| **A · Inline** | push | Pre-signs the current cart via the signer backend, hands the envelope to `BeamPay.init({ order })`. Cart locked. |
+| **B · Pay link** | push | Signs once, packs the envelope into a flat-query pay link, mounts via `BeamPay.fromLink(href)`. |
+| **C · Callback** | pull | Cart stays editable; `BeamPay.init({ createOrder })` calls the signer `/sign` at pay time with the live cart. |
+
+In all three the buyer wallet only signs `pay()`; the widget polls `getOrder()`
+on-chain — **no backend on the payer side** (Mode C aside, which needs the
+merchant's `/sign`).
 
 ## Run
 
 ```bash
-yarn install
-yarn dev          # Vite dev server
-# open http://localhost:5173/demo/
+# 1. start the merchant signer (separate repo)
+cd ../../beampay-libs/examples/demo-signer
+cp .dev.vars.example .dev.vars         # put a BSC-testnet burner key in MERCHANT_KEY
+pnpm --filter @beampay/demo-signer dev # → http://localhost:8787
+
+# 2. start the store
+cd ../../../beampay-checkout
+yarn dev                                # open the printed URL
 ```
 
-End-to-end flow:
+Point the store at a different signer with `VITE_SIGNER_URL` (defaults to
+`http://localhost:8787`).
 
-1. Connect MetaMask on **BSC Testnet (97)** and click **Get test tUSDT** (faucet).
-2. Fill the merchant/receiver address, click **Open /create to sign** — sign the order in
-   beampay-web (defaults to `https://app.beampay.fun/create`; override with `VITE_CREATE_URL`).
-3. Copy the generated pay link, paste it into the store, click **Load order into widget**.
-4. Click **Pay with BeamPay** → approve tUSDT → confirm → the success screen links to the
-   `testnet.bscscan.com` transaction.
+End-to-end:
+
+1. Connect MetaMask on **BSC Testnet (97)**, click **Get test tUSDT** (faucet)
+   and grab some tBNB for gas.
+2. Pick a mode (A / B / C). For C, adjust the cart.
+3. Click **Pay with BeamPay** → approve tUSDT → confirm → the success screen
+   links to the `testnet.bscscan.com` transaction.
 
 ## Integrating the widget in your own site
 
-The widget is framework-agnostic — drop it into any page.
-
-**ESM / npm:**
-
 ```ts
-import { BeamPayCheckout } from '@beampay/checkout'
+import { BeamPay } from '@beampay/checkout'
 
-new BeamPayCheckout({
-  chain: 'bsc-testnet',
-  merchant: '0x…',      // order owner / refund caller
-  receiver: '0x…',      // signed payout destination
-  token: '0x…',         // ERC-20 address, or NATIVE_TOKEN sentinel
-  amount: '1500000',    // wei (base units)
-  orderId: '0x…',       // 32-byte order id
-  signer: '0x…',        // EIP-712 signer
-  createdAt: 1717000000,
-  expiresAt: 1717086400,
-  signature: '0x…',     // 65-byte EIP-712 signature
-  decimals: 6,          // display only
-  symbol: 'tUSDT',      // display only
-  onSuccess: (order) => console.log('paid', order.txHash),
-  onError: (err) => console.error(err),
+// Mode A — inline pre-signed envelope
+BeamPay.init({ order: signedEnvelope, decimals: 6, symbol: 'tUSDT' }).mount('#pay')
+
+// Mode B — a beampay-web pay link
+BeamPay.fromLink(href, { decimals: 6, symbol: 'tUSDT' }).mount('#pay')
+
+// Mode C — sign on demand from your backend
+BeamPay.init({
+  createOrder: () => fetch('/sign', { method: 'POST', body }).then((r) => r.json()),
+  decimals: 6,
+  symbol: 'tUSDT',
 }).mount('#pay')
 ```
 
-**CDN / IIFE:**
-
-```html
-<div id="pay"></div>
-<script src="https://cdn.beampay.fun/checkout/v1.js" defer></script>
-<script>
-  BeamPay.init({ /* same options as above */ }).mount('#pay')
-</script>
-```
-
-The signed-order envelope (`merchant`/`receiver`/`token`/`amount`/`orderId`/`signer`/
-`createdAt`/`expiresAt`/`signature`) is exactly what a beampay-web `/pay?…` link carries —
-parse those query params straight into the options (see `demo/main.ts` `parsePayLink`).
+CDN / IIFE exposes the same `window.BeamPay`.
