@@ -204,8 +204,8 @@ async function ensureWallet(): Promise<Address> {
 }
 
 // --- Merchant signer (self-hosted backend) ---------------------------------
-// The merchant frontend computes the order amount and posts the order fields to
-// its own signer; merchant/receiver default to the signer's address server-side.
+// The merchant frontend computes the order amount and posts the order fields
+// (amount, token, merchant, receiver) to its own signer.
 // Push (A/B) call this ahead of time; pull (C) calls it at pay time.
 function cartAmount(): bigint {
   return PRODUCTS.reduce(
