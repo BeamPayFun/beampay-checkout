@@ -1,34 +1,26 @@
+import type { OrderEnvelope } from '@beampay/schemas'
 import type { Address, Hex } from 'viem'
+import type { ChainKey } from './chains'
+
+export type { OrderEnvelope }
 
 /**
- * Options passed to BeamPay.init() / new BeamPayCheckout().
+ * Where the widget gets its signed order from. The widget NEVER signs — the
+ * merchant (or an on-chain delegate) signs the EIP-712 Order off-chain; the
+ * widget only submits the buyer's `pay()`.
  *
- * Carries a full v1.4 signed order — the merchant (or a delegate) signs the
- * EIP-712 Order off-chain (e.g. via beampay-web /create) and the resulting
- * envelope is handed to the widget. The widget never signs; it only submits
- * the user's `pay()` transaction.
+ * - `order`       — Mode A (inline, push): a pre-signed envelope handed in directly.
+ * - `link`        — Mode B (pay link, push): a beampay-web `?chain=…&sig=…` link.
+ * - `createOrder` — Mode C (callback, pull): called at pay time to fetch a freshly
+ *                   signed envelope from the merchant's own backend (dynamic price).
  */
-export interface BeamPayCheckoutOptions {
-  /** Chain key: 'bsc' | 'ethereum' | 'bsc-testnet'. */
-  chain: string
-  /** Order owner — order-key namespace, event index, refund caller. */
-  merchant: Address
-  /** v1.4 signed payout destination — may differ from `merchant`. */
-  receiver: Address
-  /** Token contract address, or NATIVE_TOKEN sentinel for BNB/ETH. */
-  token: Address
-  /** Amount in token base units (wei), as a decimal string. */
-  amount: string
-  /** Merchant-scoped unique 32-byte order id (hex). */
-  orderId: Hex
-  /** EIP-712 signer recovered on-chain (merchant or merchant's delegate). */
-  signer: Address
-  /** Order creation timestamp, unix seconds (uint64). */
-  createdAt: number
-  /** Order expiry timestamp, unix seconds (uint64). */
-  expiresAt: number
-  /** 65-byte EIP-712 signature, hex-encoded. */
-  signature: Hex
+export type OrderSource =
+  | { order: OrderEnvelope }
+  | { link: string }
+  | { createOrder: (ctx?: unknown) => Promise<OrderEnvelope> }
+
+/** Display + behavior options, independent of where the order comes from. */
+export interface DisplayOpts {
   /** Token decimals — display only (amount stays in wei). Defaults to 18. */
   decimals?: number
   /** Token symbol — display only (e.g. 'tUSDT'). */
@@ -41,8 +33,25 @@ export interface BeamPayCheckoutOptions {
   onError?: (err: Error) => void
 }
 
-/** Back-compat alias — elements import `CheckoutOptions`. */
-export type CheckoutOptions = BeamPayCheckoutOptions
+/** Options passed to BeamPay.init() / new BeamPayCheckout(). */
+export type CheckoutInit = OrderSource & DisplayOpts
+
+/**
+ * A signed order in the viem-typed shape the on-chain layer submits. Produced
+ * from an OrderEnvelope by `toPayableOrder()`.
+ */
+export interface PayableOrder {
+  chain: ChainKey
+  merchant: Address
+  receiver: Address
+  token: Address
+  amount: string
+  orderId: Hex
+  signer: Address
+  createdAt: number
+  expiresAt: number
+  signature: Hex
+}
 
 /** On-chain / API order status */
 export type OrderState = 'pending' | 'paid' | 'failed' | 'expired' | 'refunded'

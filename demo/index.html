@@ -6,8 +6,7 @@
     <title>Beam Store — BeamPay Checkout Demo</title>
     <style>
       :root {
-        --indigo: #6366f1; --buyer: #6366f1; --merchant: #d97706;
-        --ink: #111827; --muted: #6b7280; --line: #e5e7eb;
+        --indigo: #6366f1; --ink: #111827; --muted: #6b7280; --line: #e5e7eb;
       }
       * { box-sizing: border-box; }
       body {
@@ -26,58 +25,48 @@
         background: white; color: var(--indigo); border: 1px solid var(--indigo);
         border-radius: 6px; padding: 4px 10px;
       }
-      main { max-width: 940px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
+      main { max-width: 720px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
       .card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
       .card h2 { font-size: 15px; margin: 0 0 12px; }
       .product { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
       .product:last-child { border-bottom: none; }
-      .product .price { font-weight: 600; }
       .qty { display: flex; gap: 6px; align-items: center; }
       .qty button { width: 26px; height: 26px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; }
       .qty button:disabled { opacity: 0.4; cursor: not-allowed; }
       .total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; margin-top: 12px; }
-      label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
       button.act {
         margin-top: 12px; background: var(--indigo); color: white; border: none;
         border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
       }
       button.act.ghost { background: white; color: var(--indigo); border: 1px solid var(--indigo); }
-      button.act.merchant-btn { background: var(--merchant); }
       button.act:disabled { opacity: 0.45; cursor: not-allowed; }
       .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
-      .pay-row { margin-top: 16px; }
       #status { font-size: 13px; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
       .ok { color: #059669; } .bad { color: #dc2626; }
       code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 
-      /* ── stepped two-column flow ── */
-      .flow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; align-items: start; }
-      #step1 { grid-column: 1; grid-row: 1; }
-      #step2 { grid-column: 2; grid-row: 2; }
-      #step3 { grid-column: 1; grid-row: 3; }
-      .step { position: relative; transition: opacity .2s, box-shadow .2s; border-top: 3px solid var(--line); }
-      .step.buyer { border-top-color: var(--buyer); }
-      .step.merchant { border-top-color: var(--merchant); }
-      .step.locked { opacity: 0.5; }
-      .step.active { box-shadow: 0 4px 18px rgba(99,102,241,.12); }
-      .step-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-      .badge { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-               padding: 2px 7px; border-radius: 999px; }
-      .badge.buyer { background: #eef2ff; color: var(--buyer); }
-      .badge.merchant { background: #fef3c7; color: var(--merchant); }
-      .step-no { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
-      .summary { margin-top: 12px; font-size: 12px; font-family: ui-monospace, monospace;
-                 background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 10px; word-break: break-all; }
-      .summary .k { color: var(--muted); }
-      .summary.empty { display: none; }
-      .pay-addr { margin-top: 4px; font-size: 12px; font-family: ui-monospace, monospace;
-                  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; word-break: break-all; }
-      .pay-addr.empty { display: none; }
-
-      @media (max-width: 680px) {
-        .flow { grid-template-columns: 1fr; }
-        #step1, #step2, #step3 { grid-column: 1; grid-row: auto; }
+      /* ── mode selector ── */
+      .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .mode {
+        text-align: left; cursor: pointer; background: white; border: 1px solid var(--line);
+        border-radius: 10px; padding: 12px; transition: border-color .15s, box-shadow .15s;
       }
+      .mode:hover { border-color: var(--indigo); }
+      .mode.sel { border-color: var(--indigo); box-shadow: 0 4px 16px rgba(99,102,241,.14); }
+      .mode .tag { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--indigo); }
+      .mode .ttl { font-size: 13px; font-weight: 600; margin: 4px 0 2px; }
+      .mode .sub { font-size: 11px; color: var(--muted); }
+      .mode .backend { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700;
+                       padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #d97706; }
+      .mode .nobackend { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700;
+                         padding: 1px 6px; border-radius: 999px; background: #ecfdf5; color: #059669; }
+      #mode-hint { font-size: 13px; color: var(--ink); margin-top: 14px; }
+      .paylink { margin-top: 12px; font-size: 12px; font-family: ui-monospace, monospace;
+                 background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 10px; word-break: break-all; }
+      .paylink.empty { display: none; }
+      .pay-row { margin-top: 16px; }
+
+      @media (max-width: 560px) { .modes { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
@@ -89,7 +78,7 @@
       </div>
     </header>
     <main>
-      <!-- ── Cart (full width) ── -->
+      <!-- ── Cart ── -->
       <section class="card">
         <h2 data-i18n="cart">Cart</h2>
         <div id="products"></div>
@@ -101,37 +90,39 @@
         </div>
       </section>
 
-      <!-- ── Stepped flow: buyer (left) ↔ merchant (right) ── -->
-      <div class="flow">
-        <!-- Step 1 · buyer · row 1 -->
-        <section class="card step buyer active" id="step1">
-          <div class="step-head"><span class="badge buyer" data-i18n="buyer">Buyer</span><span class="step-no">Step 1</span></div>
-          <h2 data-i18n="s1_title">Place order</h2>
-          <p class="hint" data-i18n="s1_hint">Confirm the cart and generate order params (chain / token / amount / orderId). Then hand off to the merchant to sign.</p>
-          <button class="act" id="place-order" data-i18n="place_order">Place order</button>
-          <button class="act ghost" id="reset" style="display:none" data-i18n="reset">↻ New order</button>
-          <div class="summary empty" id="order-summary"></div>
-        </section>
+      <!-- ── Integration mode ── -->
+      <section class="card">
+        <h2 data-i18n="modes_title">Choose integration mode</h2>
+        <div class="modes">
+          <button class="mode" id="mode-A" data-mode="A">
+            <div class="tag">A</div>
+            <div class="ttl" data-i18n="mA_ttl">Pay link</div>
+            <div class="sub" data-i18n="mA_sub">Share / invoice / QR</div>
+            <span class="nobackend" data-i18n="no_backend">no backend</span>
+          </button>
+          <button class="mode" id="mode-B" data-mode="B">
+            <div class="tag">B</div>
+            <div class="ttl" data-i18n="mB_ttl">Inline</div>
+            <div class="sub" data-i18n="mB_sub">Own site, fixed price</div>
+            <span class="nobackend" data-i18n="no_backend">no backend</span>
+          </button>
+          <button class="mode sel" id="mode-C" data-mode="C">
+            <div class="tag">C</div>
+            <div class="ttl" data-i18n="mC_ttl">Callback</div>
+            <div class="sub" data-i18n="mC_sub">Cart, dynamic price</div>
+            <span class="backend" data-i18n="needs_backend">needs backend signing</span>
+          </button>
+        </div>
+        <div id="mode-hint"></div>
+      </section>
 
-        <!-- Step 2 · merchant · row 2 -->
-        <section class="card step merchant locked" id="step2">
-          <div class="step-head"><span class="badge merchant" data-i18n="merchant">Merchant</span><span class="step-no">Step 2</span></div>
-          <h2 data-i18n="s2_title">Sign order</h2>
-          <p class="hint" data-i18n="s2_hint">Merchant connects a wallet and signs the EIP-712 Order. The connected wallet is merchant / receiver / signer.</p>
-          <button class="act merchant-btn" id="sign-order" disabled data-i18n="sign_order">Connect wallet & sign</button>
-          <div class="summary empty" id="sign-summary"></div>
-        </section>
-
-        <!-- Step 3 · buyer · row 3 -->
-        <section class="card step buyer locked" id="step3">
-          <div class="step-head"><span class="badge buyer" data-i18n="buyer">Buyer</span><span class="step-no">Step 3</span></div>
-          <h2 data-i18n="s3_title">Pay</h2>
-          <p class="hint" data-i18n="s3_hint">Shows the payout address; connect a wallet to complete payment.</p>
-          <div class="pay-addr empty" id="pay-addr"></div>
-          <div class="pay-row"><div id="pay"></div></div>
-          <div id="status"></div>
-        </section>
-      </div>
+      <!-- ── Pay ── -->
+      <section class="card">
+        <h2 data-i18n="pay_title">Pay</h2>
+        <div class="paylink empty" id="paylink"></div>
+        <div class="pay-row"><div id="pay"></div></div>
+        <div id="status"></div>
+      </section>
     </main>
     <script type="module" src="/demo/main.ts"></script>
   </body>

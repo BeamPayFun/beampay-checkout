@@ -103,6 +103,11 @@
   resolved "https://registry.yarnpkg.com/@beampay/contracts-abi/-/contracts-abi-0.3.0.tgz#30837538c3c625c5ba7382ea4c6509b706139f66"
   integrity sha512-oNLPnGK+CFakd/WpdDeQZ1+nfIycLyppZ2NqAfpg/IkAyohkB38/luCN/SzK4Zc+IKb3VN9d/Y3cGXlUdzMapw==
 
+"@beampay/schemas@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@beampay/schemas/-/schemas-0.9.0.tgz#229b423a782a6b440786264ae9dd8dd8a441d6ac"
+  integrity sha512-bMuVcwtfbTqAwjESPKYYRtExzzh6xqam7hOfrJ4sLxG3G6qXx466xrxo85EAkitdMWPsH4hjF8KPxMDI/qzsEA==
+
 "@biomejs/biome@^1.9":
   version "1.9.4"
   resolved "https://registry.yarnpkg.com/@biomejs/biome/-/biome-1.9.4.tgz#89766281cbc3a0aae865a7ff13d6aaffea2842bf"

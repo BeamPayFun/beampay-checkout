@@ -1,11 +1,8 @@
 import { LitElement, css, html } from 'lit'
-import { customElement, property } from 'lit/decorators.js'
-import type { CheckoutOptions } from '../types'
+import { customElement } from 'lit/decorators.js'
 
 @customElement('beam-pay-button')
 export class PayButton extends LitElement {
-  @property({ attribute: false }) opts?: CheckoutOptions
-
   static override styles = css`
     :host { display: inline-block; }
     button {

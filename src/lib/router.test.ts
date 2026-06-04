@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { NATIVE_TOKEN } from '../chains'
-import type { BeamPayCheckoutOptions } from '../types'
+import type { PayableOrder } from '../types'
 import { buildPayRequest, isPaid } from './router'
 
-const base: BeamPayCheckoutOptions = {
+const base: PayableOrder = {
   chain: 'bsc-testnet',
   merchant: '0x1111111111111111111111111111111111111111',
   receiver: '0x2222222222222222222222222222222222222222',

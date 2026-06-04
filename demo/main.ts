@@ -1,24 +1,26 @@
 import {
   connect,
   getAccount,
-  signTypedData,
   switchChain,
   waitForTransactionReceipt,
   writeContract,
 } from '@wagmi/core'
-import { type Address, type Hex, formatUnits, parseUnits } from 'viem'
-import { SUPPORTED_CHAINS, chainId } from '../src/chains'
+import { type Address, parseUnits } from 'viem'
+import { chainId } from '../src/chains'
 import { getWagmiConfig } from '../src/controllers/wagmi-config'
-import { BeamPay } from '../src/index'
-import { getRouterAddress } from '../src/lib/router'
-import type { BeamPayCheckoutOptions } from '../src/types'
+import { BeamPay, type OrderEnvelope } from '../src/index'
 
 // --- BSC testnet demo constants -------------------------------------------
 const TUSDT = '0x0c6DfFCbb941d2fDec9c8107e8128dcb6651951c' as Address
 const TUSDT_DECIMALS = 6
 const TUSDT_SYMBOL = 'tUSDT'
 const CHAIN = 'bsc-testnet' as const
-const TTL_SEC = 86400 * 7 // 7 days
+// Demo merchant = the demo-signer's own burner address (signer == merchant == receiver).
+const MERCHANT = '0x5ec880094B0A166ba305f7CC9eA1AB519b70a626' as Address
+
+// Self-hosted merchant signer (see examples/demo-signer in beampay-libs).
+// Deployed at demo-signer.beampay.fun; for a local signer set VITE_SIGNER_URL=http://localhost:8787.
+const SIGNER_URL = import.meta.env.VITE_SIGNER_URL ?? 'https://demo-signer.beampay.fun'
 
 const faucetAbi = [
   {
@@ -47,53 +49,38 @@ const STR: Record<string, Entry> = {
     zh: '铸造 mock tUSDT 到钱包以便支付。',
   },
   faucet_bnb: { en: 'Get tBNB (gas) ↗', zh: '领取 tBNB（gas）↗' },
-  buyer: { en: 'Buyer', zh: '买家' },
-  merchant: { en: 'Merchant', zh: '商户' },
-  s1_title: { en: 'Place order', zh: '下单' },
-  s1_hint: {
-    en: 'Confirm the cart and generate order params (chain / token / amount / orderId). Then hand off to the merchant to sign.',
-    zh: '确认购物车，生成订单参数（链 / 代币 / 金额 / orderId）。下单后交由商户签署。',
+  modes_title: { en: 'Choose integration mode', zh: '选择集成模式' },
+  mA_ttl: { en: 'Pay link', zh: '支付链接' },
+  mA_sub: { en: 'Share / invoice / QR', zh: '分享 / 发票 / 二维码' },
+  mB_ttl: { en: 'Inline', zh: '内联' },
+  mB_sub: { en: 'Own site, fixed price', zh: '自有站，定价固定' },
+  mC_ttl: { en: 'Callback', zh: '回调' },
+  mC_sub: { en: 'Cart, dynamic price', zh: '购物车，动态价' },
+  no_backend: { en: 'no backend', zh: '无需后端' },
+  needs_backend: { en: 'needs backend signing', zh: '依赖后端签名' },
+  pay_title: { en: 'Pay', zh: '支付' },
+  hint_A: {
+    en: 'Push: the merchant signs once, packs the envelope into a flat-query pay link, and shares it. BeamPay.fromLink(href) parses it — no backend for the payer.',
+    zh: 'Push：商户签一次，把 envelope 打包进扁平 query 支付链接并分享。BeamPay.fromLink(href) 解析它——付款方无需后端。',
   },
-  place_order: { en: 'Place order', zh: '下单' },
-  reset: { en: '↻ New order', zh: '↻ 重新下单' },
-  s2_title: { en: 'Sign order', zh: '签署订单' },
-  s2_hint: {
-    en: 'Merchant connects a wallet and signs the EIP-712 Order. The connected wallet is merchant / receiver / signer.',
-    zh: '商户连接钱包，对 EIP-712 Order 进行签名。连接的钱包即 merchant / receiver / signer。',
+  hint_B: {
+    en: 'Push: the merchant pre-signs a fixed-price order server-side and hands the envelope straight to BeamPay.init({ order }). The cart is locked.',
+    zh: 'Push：商户在后端对固定价订单预签名，把 envelope 直接传给 BeamPay.init({ order })。购物车已锁定。',
   },
-  sign_order: { en: 'Connect wallet & sign', zh: '连接钱包并签署' },
-  s3_title: { en: 'Pay', zh: '支付' },
-  s3_hint: {
-    en: 'Shows the payout address; connect a wallet to complete payment.',
-    zh: '显示收款地址，用户连接钱包完成支付。',
+  hint_C: {
+    en: 'Pull: edit the cart, then click Pay. BeamPay calls createOrder() → your /sign backend computes the price and signs on demand. The buyer wallet only signs pay().',
+    zh: 'Pull：修改购物车后点支付。BeamPay 调 createOrder() → 你的 /sign 后端按需算价并签名。买家钱包只签 pay()。',
   },
-  // summary field labels
-  k_amount: { en: 'Amount', zh: '金额' },
-  k_token: { en: 'Token', zh: '代币' },
-  k_orderId: { en: 'orderId', zh: 'orderId' },
-  k_merchant: { en: 'Merchant', zh: '商户' },
-  k_signature: { en: 'Signature', zh: '签名' },
-  k_payaddr: { en: 'Payout address', zh: '收款地址' },
-  // status messages
   st_connecting: { en: 'Connecting wallet…', zh: '连接钱包…' },
   st_minting: { en: 'Minting 100 tUSDT…', zh: '铸造 100 tUSDT…' },
   st_minted: { en: 'Minted 100 tUSDT ✓', zh: '已铸造 100 tUSDT ✓' },
   st_faucet_fail: { en: (e) => `Faucet failed: ${e}`, zh: (e) => `领取失败: ${e}` },
   st_cart_empty: { en: 'Cart is empty — add an item first.', zh: '购物车为空，请先加购商品。' },
-  st_order_generated: {
-    en: 'Order created, waiting for merchant signature…',
-    zh: '订单已生成，等待商户签署…',
-  },
-  st_connect_merchant: { en: 'Connecting merchant wallet…', zh: '连接商户钱包…' },
-  st_sign_prompt: {
-    en: 'Sign the EIP-712 Order in your wallet…',
-    zh: '请在钱包中签署 EIP-712 Order…',
-  },
-  st_signed: {
-    en: 'Order signed ✓ — click to pay.',
-    zh: '订单已签署 ✓，点击完成支付。',
-  },
-  st_sign_fail: { en: (e) => `Signing failed: ${e}`, zh: (e) => `签署失败: ${e}` },
+  st_signing: { en: 'Merchant backend signing order…', zh: '商户后端签署订单中…' },
+  st_signer_fail: { en: (e) => `Signer error: ${e}`, zh: (e) => `签名器错误: ${e}` },
+  st_ready_A: { en: 'Pay link generated — click Pay.', zh: '支付链接已生成——点击支付。' },
+  st_ready_B: { en: 'Pre-signed order ready — click Pay.', zh: '预签名订单就绪——点击支付。' },
+  st_ready_C: { en: 'Edit the cart, then click Pay.', zh: '修改购物车后点击支付。' },
   st_paid: { en: (tx) => `Paid ✓  tx: ${tx}`, zh: (tx) => `支付成功 ✓  tx: ${tx}` },
   st_pay_error: { en: (m) => `Payment error: ${m}`, zh: (m) => `支付错误: ${m}` },
 }
@@ -108,7 +95,7 @@ function t(key: string, arg = ''): string {
 interface Product {
   id: string
   name: string
-  price: string // tUSDT, human units
+  price: string // tUSDT, human units (mirrors the signer catalog)
 }
 const PRODUCTS: Product[] = [
   { id: 'mug', name: 'Beam Mug', price: '4.5' },
@@ -119,9 +106,6 @@ const qty: Record<string, number> = { mug: 1, tee: 0, hoodie: 0 }
 
 function totalUnits(): number {
   return PRODUCTS.reduce((sum, p) => sum + Number(p.price) * qty[p.id], 0)
-}
-function totalWei(): bigint {
-  return parseUnits(totalUnits().toFixed(TUSDT_DECIMALS), TUSDT_DECIMALS)
 }
 
 // --- DOM -------------------------------------------------------------------
@@ -144,14 +128,12 @@ function renderProducts() {
   }
   for (const b of Array.from(root.querySelectorAll('button[data-inc]'))) {
     b.addEventListener('click', () => {
-      if (phase !== 'cart') return
       qty[(b as HTMLElement).dataset.inc as string]++
       refresh()
     })
   }
   for (const b of Array.from(root.querySelectorAll('button[data-dec]'))) {
     b.addEventListener('click', () => {
-      if (phase !== 'cart') return
       const id = (b as HTMLElement).dataset.dec as string
       qty[id] = Math.max(0, qty[id] - 1)
       refresh()
@@ -164,7 +146,14 @@ function refresh() {
   $('#total').textContent = `${totalUnits()} ${TUSDT_SYMBOL}`
 }
 
-// Status is stored by key (+ optional arg) so it re-translates on language toggle.
+// Cart is editable only in Mode C (dynamic price). Push modes lock it.
+function setCartLocked(locked: boolean) {
+  for (const b of Array.from($('#products').querySelectorAll('button'))) {
+    ;(b as HTMLButtonElement).disabled = locked
+  }
+}
+
+// Status stored by key (+ arg) so it re-translates on language toggle.
 let lastStatus: { key: string; arg: string; cls: string } | null = null
 function setStatus(key: string | null, arg = '', cls = '') {
   lastStatus = key ? { key, arg, cls } : null
@@ -174,11 +163,6 @@ function renderStatus() {
   const el = $('#status')
   el.textContent = lastStatus ? t(lastStatus.key, lastStatus.arg) : ''
   el.className = lastStatus?.cls ?? ''
-}
-
-function shortHex(s: string, n = 6): string {
-  if (!s) return ''
-  return `${s.slice(0, n + 2)}…${s.slice(-4)}`
 }
 
 // --- Faucet ----------------------------------------------------------------
@@ -205,7 +189,6 @@ async function runFaucet() {
   }
 }
 
-// Connect the injected wallet and pin it to the demo chain. Returns the address.
 async function ensureWallet(): Promise<Address> {
   let acct = getAccount(config)
   if (!acct.isConnected) {
@@ -220,230 +203,120 @@ async function ensureWallet(): Promise<Address> {
   return addr
 }
 
-// --- EIP-712 typed data (mirrors BeamPayRouter ORDER_TYPEHASH) -------------
-interface TypedDataParams {
-  merchant: Address
-  receiver: Address
-  signer: Address
-  token: Address
-  amount: bigint
-  orderId: Hex
-  createdAt: bigint
-  expiresAt: bigint
+// --- Merchant signer (self-hosted backend) ---------------------------------
+// The merchant frontend computes the order amount and posts the order fields
+// (amount, token, merchant, receiver) to its own signer.
+// Push (A/B) call this ahead of time; pull (C) calls it at pay time.
+function cartAmount(): bigint {
+  return PRODUCTS.reduce(
+    (sum, p) => sum + parseUnits(p.price, TUSDT_DECIMALS) * BigInt(qty[p.id]),
+    0n,
+  )
 }
 
-function buildOrderTypedData(p: TypedDataParams) {
-  return {
-    domain: {
-      name: 'BeamPayRouter',
-      version: '1',
-      chainId: SUPPORTED_CHAINS[CHAIN].id,
-      verifyingContract: getRouterAddress(CHAIN),
-    },
-    types: {
-      Order: [
-        { name: 'merchant', type: 'address' },
-        { name: 'receiver', type: 'address' },
-        { name: 'signer', type: 'address' },
-        { name: 'token', type: 'address' },
-        { name: 'amount', type: 'uint256' },
-        { name: 'orderId', type: 'bytes32' },
-        { name: 'createdAt', type: 'uint64' },
-        { name: 'expiresAt', type: 'uint64' },
-      ],
-    },
-    primaryType: 'Order' as const,
-    message: {
-      merchant: p.merchant,
-      receiver: p.receiver,
-      signer: p.signer,
-      token: p.token,
-      amount: p.amount,
-      orderId: p.orderId,
-      createdAt: p.createdAt,
-      expiresAt: p.expiresAt,
-    },
-  } as const
-}
-
-function randomOrderId(): Hex {
-  const b = new Uint8Array(32)
-  crypto.getRandomValues(b)
-  return `0x${Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('')}` as Hex
-}
-
-// --- Step state machine ----------------------------------------------------
-type Phase = 'cart' | 'ordered' | 'signed'
-let phase: Phase = 'cart'
-
-interface OrderDraft {
-  amount: bigint
-  orderId: Hex
-  createdAt: number
-  expiresAt: number
-}
-let draft: OrderDraft | null = null
-let signed: { merchant: Address; signature: Hex } | null = null
-
-// Summary renderers read from stored state so they re-translate on lang toggle.
-function renderOrderSummary() {
-  const el = $('#order-summary')
-  if (!draft) {
-    el.classList.add('empty')
-    el.innerHTML = ''
-    return
-  }
-  el.classList.remove('empty')
-  el.innerHTML = `
-    <div><span class="k">${t('k_amount')}</span> ${formatUnits(draft.amount, TUSDT_DECIMALS)} ${TUSDT_SYMBOL}</div>
-    <div><span class="k">${t('k_token')}</span> ${TUSDT_SYMBOL} · ${shortHex(TUSDT)}</div>
-    <div><span class="k">${t('k_orderId')}</span> ${shortHex(draft.orderId, 8)}</div>`
-}
-function renderSignSummary() {
-  const el = $('#sign-summary')
-  if (!signed) {
-    el.classList.add('empty')
-    el.innerHTML = ''
-    return
-  }
-  el.classList.remove('empty')
-  el.innerHTML = `
-    <div><span class="k">${t('k_merchant')}</span> ${shortHex(signed.merchant)}</div>
-    <div><span class="k">${t('k_signature')}</span> ${signed.signature.slice(0, 22)}…${signed.signature.slice(-12)}</div>`
-}
-function renderPayAddr() {
-  const el = $('#pay-addr')
-  if (!signed) {
-    el.classList.add('empty')
-    el.innerHTML = ''
-    return
-  }
-  el.classList.remove('empty')
-  el.innerHTML = `<span class="k">${t('k_payaddr')}</span><br>${signed.merchant}`
-}
-
-// Reflect `phase` onto the three step cards (lock / active styling + buttons).
-function updateGating() {
-  const step1 = $('#step1')
-  const step2 = $('#step2')
-  const step3 = $('#step3')
-  const signBtn = $('#sign-order') as HTMLButtonElement
-
-  for (const el of [step1, step2, step3]) el.classList.remove('active')
-  // Cart qty buttons follow phase (re-render is cheap and resets disabled state).
-  for (const b of Array.from($('#products').querySelectorAll('button'))) {
-    ;(b as HTMLButtonElement).disabled = phase !== 'cart'
-  }
-
-  step2.classList.toggle('locked', phase === 'cart')
-  step3.classList.toggle('locked', phase !== 'signed')
-  signBtn.disabled = phase !== 'ordered'
-
-  if (phase === 'cart') step1.classList.add('active')
-  else if (phase === 'ordered') step2.classList.add('active')
-  else step3.classList.add('active')
-}
-
-// --- Step 1: buyer places the order ----------------------------------------
-function placeOrder() {
-  const amount = totalWei()
-  if (amount <= 0n) {
-    setStatus('st_cart_empty', '', 'bad')
-    return
-  }
-  const createdAt = Math.floor(Date.now() / 1000)
-  draft = {
-    amount,
-    orderId: randomOrderId(),
-    createdAt,
-    expiresAt: createdAt + TTL_SEC,
-  }
-  phase = 'ordered'
-
-  renderOrderSummary()
-  ;($('#place-order') as HTMLElement).style.display = 'none'
-  ;($('#reset') as HTMLElement).style.display = ''
-  setStatus('st_order_generated')
-  updateGating()
-}
-
-// --- Step 2: merchant connects + signs the order ---------------------------
-async function signOrder() {
-  if (!draft) return
-  const btn = $('#sign-order') as HTMLButtonElement
-  btn.disabled = true
-  try {
-    setStatus('st_connect_merchant')
-    const merchant = await ensureWallet()
-    // Self-signed path: merchant == receiver == signer.
-    const typedData = buildOrderTypedData({
-      merchant,
-      receiver: merchant,
-      signer: merchant,
+async function signViaBackend(): Promise<OrderEnvelope> {
+  const amount = cartAmount()
+  if (amount <= 0n) throw new Error('empty cart')
+  const res = await fetch(`${SIGNER_URL}/sign`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      amount: amount.toString(),
       token: TUSDT,
-      amount: draft.amount,
-      orderId: draft.orderId,
-      createdAt: BigInt(draft.createdAt),
-      expiresAt: BigInt(draft.expiresAt),
-    })
-    setStatus('st_sign_prompt')
-    const signature = (await signTypedData(config, typedData)) as Hex
-
-    const envelope: BeamPayCheckoutOptions = {
-      chain: CHAIN,
-      merchant,
-      receiver: merchant,
-      token: TUSDT,
-      amount: draft.amount.toString(),
-      orderId: draft.orderId,
-      signer: merchant,
-      createdAt: draft.createdAt,
-      expiresAt: draft.expiresAt,
-      signature,
-      decimals: TUSDT_DECIMALS,
-      symbol: TUSDT_SYMBOL,
-    }
-    phase = 'signed'
-    signed = { merchant, signature }
-
-    renderSignSummary()
-    setStatus('st_signed', '', 'ok')
-    updateGating()
-    mountWidget(envelope)
-  } catch (err) {
-    setStatus('st_sign_fail', err instanceof Error ? err.message : String(err), 'bad')
-    btn.disabled = false
+      merchant: MERCHANT,
+      receiver: MERCHANT,
+    }),
+  })
+  const json = (await res.json().catch(() => null)) as {
+    code: string
+    msg: string
+    data: OrderEnvelope | null
+  } | null
+  if (!res.ok || json?.code !== '000000000' || !json.data) {
+    throw new Error(json?.msg ?? `signer ${res.status}`)
   }
+  return json.data
 }
 
-// --- Step 3: show pay address + mount the widget ---------------------------
-function mountWidget(opts: BeamPayCheckoutOptions) {
-  renderPayAddr()
+// Pack an envelope into the same flat-query pay link beampay-web /create emits.
+function buildPayLink(env: OrderEnvelope): string {
+  const q = new URLSearchParams({
+    chain: env.chain,
+    merchant: env.merchant,
+    receiver: env.receiver,
+    token: env.token,
+    amount: env.amount,
+    orderId: env.orderId,
+    signer: env.signer,
+    createdAt: String(env.createdAt),
+    expiresAt: String(env.expiresAt),
+    sig: env.signature,
+    feeBps: String(env.feeBps),
+  })
+  return `https://app.beampay.fun/pay?${q.toString()}`
+}
 
-  // Fresh mount target each time (mount() replaces the node it's given).
-  const row = $('.pay-row')
-  row.innerHTML = '<div id="pay"></div>'
+// --- Mode handling ---------------------------------------------------------
+type Mode = 'A' | 'B' | 'C'
+let mode: Mode = 'C'
+
+const DISPLAY = { decimals: TUSDT_DECIMALS, symbol: TUSDT_SYMBOL }
+
+function resetPayArea() {
+  $('.pay-row').innerHTML = '<div id="pay"></div>'
+  const link = $('#paylink')
+  link.classList.add('empty')
+  link.innerHTML = ''
+}
+
+function mountCommon(source: Parameters<typeof BeamPay.init>[0]) {
+  resetPayArea()
   BeamPay.init({
-    ...opts,
+    ...source,
+    ...DISPLAY,
     onSuccess: (order) => setStatus('st_paid', order.txHash ?? '', 'ok'),
     onError: (e) => setStatus('st_pay_error', e.message, 'bad'),
   }).mount('#pay')
 }
 
-// --- Reset: start a new order ----------------------------------------------
-function resetFlow() {
-  phase = 'cart'
-  draft = null
-  signed = null
-  ;($('#place-order') as HTMLElement).style.display = ''
-  ;($('#reset') as HTMLElement).style.display = 'none'
-  renderOrderSummary()
-  renderSignSummary()
-  renderPayAddr()
-  $('.pay-row').innerHTML = '<div id="pay"></div>'
-  ;($('#sign-order') as HTMLButtonElement).disabled = true
-  setStatus(null)
-  updateGating()
+async function selectMode(next: Mode) {
+  mode = next
+  for (const el of Array.from(document.querySelectorAll<HTMLElement>('.mode'))) {
+    el.classList.toggle('sel', el.dataset.mode === mode)
+  }
+  $('#mode-hint').textContent = t(`hint_${mode}`)
+  resetPayArea()
+  setCartLocked(mode !== 'C')
+
+  if (mode === 'C') {
+    // Pull: sign on demand at pay time with the live cart.
+    setStatus('st_ready_C')
+    mountCommon({ createOrder: () => signViaBackend() })
+    return
+  }
+
+  // Push (A / B): pre-sign the current cart now.
+  if (totalUnits() <= 0) {
+    setStatus('st_cart_empty', '', 'bad')
+    return
+  }
+  setStatus('st_signing')
+  try {
+    const env = await signViaBackend()
+    if (mode === 'A') {
+      const href = buildPayLink(env)
+      const link = $('#paylink')
+      link.classList.remove('empty')
+      link.textContent = href
+      mountCommon({ link: href })
+      setStatus('st_ready_A', '', 'ok')
+    } else {
+      mountCommon({ order: env })
+      setStatus('st_ready_B', '', 'ok')
+    }
+  } catch (err) {
+    setStatus('st_signer_fail', err instanceof Error ? err.message : String(err), 'bad')
+  }
 }
 
 // --- Language toggle -------------------------------------------------------
@@ -451,12 +324,8 @@ function applyLang() {
   for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-i18n]'))) {
     el.textContent = t(el.dataset.i18n as string)
   }
-  // Re-render dynamic parts from stored state.
-  renderOrderSummary()
-  renderSignSummary()
-  renderPayAddr()
+  $('#mode-hint').textContent = t(`hint_${mode}`)
   renderStatus()
-  // Toggle button shows the *other* language.
   ;($('#lang-toggle') as HTMLElement).textContent = lang === 'en' ? '中文' : 'EN'
   document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN'
 }
@@ -468,10 +337,10 @@ function toggleLang() {
 // --- Wire up ---------------------------------------------------------------
 renderProducts()
 refresh()
-updateGating()
 applyLang()
 $('#faucet').addEventListener('click', runFaucet)
-$('#place-order').addEventListener('click', placeOrder)
-$('#sign-order').addEventListener('click', signOrder)
-$('#reset').addEventListener('click', resetFlow)
 $('#lang-toggle').addEventListener('click', toggleLang)
+for (const el of Array.from(document.querySelectorAll<HTMLElement>('.mode'))) {
+  el.addEventListener('click', () => void selectMode(el.dataset.mode as Mode))
+}
+void selectMode('C')
