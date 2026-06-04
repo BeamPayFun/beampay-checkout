@@ -4,74 +4,307 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Beam Store — BeamPay Checkout Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      /* ─────────────────────────────────────────────────────────────
+         Beam Store demo — aligned to the BeamPay brand:
+         soft light ground, electric-blue signal, monospaced data,
+         emerald success / red error. Tokens mirror beampay.fun.
+         ───────────────────────────────────────────────────────────── */
       :root {
-        --indigo: #6366f1; --ink: #111827; --muted: #6b7280; --line: #e5e7eb;
+        --bg-0: #eef3fb;
+        --bg-1: #f6f9fe;
+        --surface: #ffffff;
+        --ink: #0a1830;
+        --muted: #5c6b86;
+        --faint: #8c99b3;
+        --line: #e3e9f3;
+        --line-strong: #d3dbea;
+        --cyan: #2563eb;
+        --cyan-dim: #1d4ed8;
+        --cyan-soft: rgba(37, 99, 235, 0.08);
+        --violet: #6366f1;
+        --emerald: #16a34a;
+        --emerald-soft: rgba(22, 163, 74, 0.1);
+        --amber: #d97706;
+        --amber-soft: rgba(217, 119, 6, 0.1);
+        --red: #dc2626;
+        --red-soft: rgba(220, 38, 38, 0.09);
+        --r-sm: 8px;
+        --r-md: 12px;
+        --r-lg: 16px;
+        --mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+        --sans: "Space Grotesk", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      }
+      :lang(zh) {
+        --sans: "Space Grotesk", -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
       }
       * { box-sizing: border-box; }
+      html, body { margin: 0; }
       body {
-        font-family: system-ui, -apple-system, sans-serif; color: var(--ink);
-        margin: 0; background: #f3f4f6; line-height: 1.5;
+        font-family: var(--sans);
+        color: var(--ink);
+        background:
+          radial-gradient(900px 460px at 50% -180px, rgba(37, 99, 235, 0.1), transparent 70%),
+          var(--bg-0);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
       }
+      /* faint engineering grid, like the marketing ground */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(37, 99, 235, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(37, 99, 235, 0.04) 1px, transparent 1px);
+        background-size: 44px 44px;
+        mask-image: radial-gradient(720px 600px at 50% 0, #000, transparent 78%);
+        z-index: 0;
+      }
+      .mono { font-family: var(--mono); }
+
+      /* ─── Header ─────────────────────────────────────────── */
       header {
-        background: white; border-bottom: 1px solid var(--line);
-        padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+        position: relative;
+        z-index: 1;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
       }
-      header h1 { font-size: 18px; margin: 0; }
-      header .hgroup { display: flex; align-items: center; gap: 14px; }
-      header .net { font-size: 12px; color: var(--muted); }
+      .brand { display: flex; align-items: center; gap: 11px; }
+      .brand-mark {
+        width: 32px; height: 32px; flex-shrink: 0;
+        border-radius: 9px;
+        background: linear-gradient(135deg, var(--cyan), var(--violet));
+        display: grid; place-items: center;
+        color: #fff; font-size: 16px; font-weight: 700;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.32);
+      }
+      header h1 {
+        font-size: 17px; font-weight: 600; margin: 0;
+        letter-spacing: -0.01em;
+      }
+      .hgroup { display: flex; align-items: center; gap: 14px; }
+      header .net {
+        font-family: var(--mono);
+        font-size: 10.5px; letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--faint);
+        display: inline-flex; align-items: center; gap: 7px;
+      }
+      header .net::before {
+        content: ""; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--emerald); box-shadow: 0 0 7px var(--emerald);
+      }
       #lang-toggle {
-        font-size: 12px; font-weight: 600; cursor: pointer;
-        background: white; color: var(--indigo); border: 1px solid var(--indigo);
-        border-radius: 6px; padding: 4px 10px;
+        font-family: var(--mono);
+        font-size: 11px; font-weight: 600; cursor: pointer;
+        background: var(--surface); color: var(--cyan);
+        border: 1px solid var(--line-strong);
+        border-radius: 999px; padding: 6px 13px;
+        transition: border-color 0.15s, background 0.15s;
       }
-      main { max-width: 720px; margin: 24px auto; padding: 0 16px; display: grid; gap: 20px; }
-      .card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
-      .card h2 { font-size: 15px; margin: 0 0 12px; }
-      .product { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
-      .product:last-child { border-bottom: none; }
-      .qty { display: flex; gap: 6px; align-items: center; }
-      .qty button { width: 26px; height: 26px; border: 1px solid var(--line); background: white; border-radius: 6px; cursor: pointer; }
+      #lang-toggle:hover { border-color: var(--cyan); background: var(--cyan-soft); }
+
+      main {
+        position: relative; z-index: 1;
+        max-width: 720px; margin: 28px auto 64px;
+        padding: 0 18px;
+        display: grid; gap: 18px;
+      }
+
+      /* ─── Cards ──────────────────────────────────────────── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        padding: 22px;
+        box-shadow: 0 1px 2px rgba(10, 37, 64, 0.04), 0 14px 32px rgba(10, 37, 64, 0.05);
+      }
+      .card h2 {
+        font-family: var(--mono);
+        font-size: 11px; font-weight: 600;
+        letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--faint);
+        margin: 0 0 16px;
+        display: flex; align-items: center; gap: 9px;
+      }
+      .card h2::before {
+        content: ""; width: 7px; height: 7px; border-radius: 2px;
+        background: var(--cyan);
+        box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+      }
+
+      /* ─── Cart ───────────────────────────────────────────── */
+      .product {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 13px 0; border-bottom: 1px solid var(--line);
+        font-size: 14.5px;
+      }
+      .product:first-child { padding-top: 2px; }
+      .product:last-of-type { border-bottom: none; }
+      .qty { display: flex; gap: 8px; align-items: center; }
+      .qty button {
+        width: 30px; height: 30px; flex-shrink: 0;
+        border: 1px solid var(--line-strong); background: var(--surface);
+        border-radius: 9px; cursor: pointer;
+        font-size: 16px; line-height: 1; color: var(--ink);
+        display: grid; place-items: center;
+        transition: border-color 0.15s, background 0.15s, color 0.15s;
+      }
+      .qty button:hover:not(:disabled) {
+        border-color: var(--cyan); color: var(--cyan); background: var(--cyan-soft);
+      }
       .qty button:disabled { opacity: 0.4; cursor: not-allowed; }
-      .total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; margin-top: 12px; }
+      .qty > span {
+        font-family: var(--mono); font-size: 14px; font-weight: 500;
+        min-width: 18px; text-align: center;
+      }
+      .total {
+        display: flex; justify-content: space-between; align-items: baseline;
+        font-size: 14px; color: var(--muted);
+        margin-top: 18px; padding-top: 18px;
+        border-top: 1px solid var(--line);
+      }
+      .total #total {
+        font-family: var(--sans); font-size: 22px; font-weight: 600;
+        color: var(--ink); letter-spacing: -0.01em;
+      }
+
       button.act {
-        margin-top: 12px; background: var(--indigo); color: white; border: none;
-        border-radius: 8px; padding: 9px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
+        margin-top: 16px;
+        display: inline-flex; align-items: center; gap: 8px;
+        background: linear-gradient(180deg, var(--cyan), var(--cyan-dim));
+        color: #fff; border: 1px solid transparent;
+        border-radius: 10px; padding: 11px 16px;
+        font-family: var(--sans); font-size: 14px; font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.26);
+        transition: filter 0.15s, transform 0.05s, box-shadow 0.15s;
       }
-      button.act.ghost { background: white; color: var(--indigo); border: 1px solid var(--indigo); }
+      button.act:hover:not(:disabled) { filter: brightness(1.06); }
+      button.act:active:not(:disabled) { transform: translateY(1px); }
+      button.act.ghost {
+        background: var(--surface); color: var(--cyan);
+        border: 1px solid var(--line-strong); box-shadow: none;
+      }
+      button.act.ghost:hover:not(:disabled) {
+        border-color: var(--cyan); background: var(--cyan-soft); filter: none;
+      }
       button.act:disabled { opacity: 0.45; cursor: not-allowed; }
-      .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
-      #status { font-size: 13px; margin-top: 10px; white-space: pre-wrap; word-break: break-all; }
-      .ok { color: #059669; } .bad { color: #dc2626; }
-      code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 
-      /* ── mode selector ── */
-      .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-      .mode {
-        text-align: left; cursor: pointer; background: white; border: 1px solid var(--line);
-        border-radius: 10px; padding: 12px; transition: border-color .15s, box-shadow .15s;
+      .hint {
+        font-size: 12.5px; color: var(--muted); margin-top: 9px;
       }
-      .mode:hover { border-color: var(--indigo); }
-      .mode.sel { border-color: var(--indigo); box-shadow: 0 4px 16px rgba(99,102,241,.14); }
-      .mode .tag { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--indigo); }
-      .mode .ttl { font-size: 13px; font-weight: 600; margin: 4px 0 2px; }
-      .mode .sub { font-size: 11px; color: var(--muted); }
-      .mode .backend { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700;
-                       padding: 1px 6px; border-radius: 999px; background: #fef3c7; color: #d97706; }
-      .mode .nobackend { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700;
-                         padding: 1px 6px; border-radius: 999px; background: #ecfdf5; color: #059669; }
-      #mode-hint { font-size: 13px; color: var(--ink); margin-top: 14px; }
-      .paylink { margin-top: 12px; font-size: 12px; font-family: ui-monospace, monospace;
-                 background: #f9fafb; border: 1px solid var(--line); border-radius: 8px; padding: 10px; word-break: break-all; }
-      .paylink.empty { display: none; }
-      .pay-row { margin-top: 16px; }
+      .hint a { color: var(--cyan); font-weight: 500; text-decoration: none; }
+      .hint a:hover { text-decoration: underline; }
+      code {
+        font-family: var(--mono);
+        background: var(--bg-1); border: 1px solid var(--line);
+        padding: 1px 5px; border-radius: 5px; font-size: 12px; color: var(--cyan-dim);
+      }
 
-      @media (max-width: 560px) { .modes { grid-template-columns: 1fr; } }
+      /* ─── Mode selector ──────────────────────────────────── */
+      .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; }
+      .mode {
+        position: relative; text-align: left; cursor: pointer;
+        background: var(--surface); border: 1px solid var(--line-strong);
+        border-radius: var(--r-md); padding: 14px;
+        font-family: var(--sans);
+        transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.05s;
+      }
+      .mode:hover { border-color: var(--cyan); transform: translateY(-1px); }
+      .mode.sel {
+        border-color: var(--cyan);
+        background: var(--cyan-soft);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14), 0 8px 22px rgba(37, 99, 235, 0.16);
+      }
+      .mode .tag {
+        font-family: var(--mono);
+        display: inline-grid; place-items: center;
+        width: 22px; height: 22px; border-radius: 6px;
+        font-size: 11px; font-weight: 600;
+        color: var(--cyan); background: var(--cyan-soft);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+      }
+      .mode.sel .tag { color: #fff; background: var(--cyan); border-color: transparent; }
+      .mode .ttl { font-size: 14px; font-weight: 600; margin: 9px 0 3px; }
+      .mode .sub { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+      .mode .backend, .mode .nobackend {
+        display: inline-block; margin-top: 9px;
+        font-family: var(--mono);
+        font-size: 9px; font-weight: 600; letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+      }
+      .mode .backend { background: var(--amber-soft); color: var(--amber); }
+      .mode .nobackend { background: var(--emerald-soft); color: var(--emerald); }
+
+      #mode-hint {
+        font-size: 13px; color: var(--muted); line-height: 1.55;
+        margin-top: 16px; padding: 13px 15px;
+        background: var(--bg-1); border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+      }
+      #mode-hint:empty { display: none; }
+
+      /* ─── Pay ────────────────────────────────────────────── */
+      .paylink {
+        margin-top: 4px; margin-bottom: 16px;
+        font-family: var(--mono); font-size: 12px; line-height: 1.6;
+        background: var(--bg-1); border: 1px solid var(--line);
+        border-left: 3px solid var(--cyan);
+        border-radius: var(--r-sm); padding: 12px 14px;
+        word-break: break-all; color: var(--cyan-dim);
+      }
+      .paylink.empty { display: none; }
+      .pay-row { margin-top: 4px; }
+
+      #status {
+        font-size: 13px; margin-top: 14px;
+        white-space: pre-wrap; word-break: break-all;
+        color: var(--muted);
+      }
+      #status:empty { display: none; }
+      #status.ok, #status.bad {
+        display: inline-flex; align-items: flex-start; gap: 9px;
+        font-family: var(--mono); font-size: 12px; line-height: 1.5;
+        padding: 9px 13px; border-radius: 999px;
+      }
+      #status.ok::before, #status.bad::before {
+        content: ""; flex-shrink: 0; margin-top: 4px;
+        width: 7px; height: 7px; border-radius: 50%;
+      }
+      #status.ok { color: var(--emerald); background: var(--emerald-soft); }
+      #status.ok::before { background: var(--emerald); box-shadow: 0 0 7px var(--emerald); }
+      #status.bad { color: var(--red); background: var(--red-soft); }
+      #status.bad::before { background: var(--red); box-shadow: 0 0 7px var(--red); }
+
+      @media (max-width: 560px) {
+        .modes { grid-template-columns: 1fr; }
+        header { padding: 12px 16px; }
+        .card { padding: 18px; }
+      }
     </style>
   </head>
   <body>
     <header>
-      <h1>⚡ Beam Store</h1>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">◆</span>
+        <h1>Beam Store</h1>
+      </div>
       <div class="hgroup">
         <span class="net" data-i18n="tagline">BeamPay Checkout demo · BSC Testnet</span>
         <button id="lang-toggle">中文</button>
