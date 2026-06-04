@@ -57,7 +57,7 @@ const STR: Record<string, Entry> = {
   mC_ttl: { en: 'Callback', zh: '回调' },
   mC_sub: { en: 'Cart, dynamic price', zh: '购物车，动态价' },
   no_backend: { en: 'no backend at pay time', zh: '支付时无需后端' },
-  needs_backend: { en: 'needs /sign backend', zh: '需 /sign 后端' },
+  needs_backend: { en: 'needs backend signing', zh: '依赖后端签名' },
   pay_title: { en: 'Pay', zh: '支付' },
   hint_A: {
     en: 'Push: the merchant signs once, packs the envelope into a flat-query pay link, and shares it. BeamPay.fromLink(href) parses it — no backend for the payer.',
