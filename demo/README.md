@@ -30,8 +30,8 @@ cd ../../../beampay-checkout
 yarn dev                                # open the printed URL
 ```
 
-Point the store at a different signer with `VITE_SIGNER_URL` (defaults to
-`http://localhost:8787`).
+The store defaults to the hosted signer at `https://demo-signer.beampay.fun`.
+Point it at a local signer with `VITE_SIGNER_URL=http://localhost:8787`.
 
 End-to-end:
 

@@ -17,7 +17,8 @@ const TUSDT_SYMBOL = 'tUSDT'
 const CHAIN = 'bsc-testnet' as const
 
 // Self-hosted merchant signer (see examples/demo-signer in beampay-libs).
-const SIGNER_URL = import.meta.env.VITE_SIGNER_URL ?? 'http://localhost:8787'
+// Deployed at demo-signer.beampay.fun; for a local signer set VITE_SIGNER_URL=http://localhost:8787.
+const SIGNER_URL = import.meta.env.VITE_SIGNER_URL ?? 'https://demo-signer.beampay.fun'
 
 const faucetAbi = [
   {
@@ -103,9 +104,6 @@ const qty: Record<string, number> = { mug: 1, tee: 0, hoodie: 0 }
 
 function totalUnits(): number {
   return PRODUCTS.reduce((sum, p) => sum + Number(p.price) * qty[p.id], 0)
-}
-function cartItems(): Record<string, number> {
-  return { ...qty }
 }
 
 // --- DOM -------------------------------------------------------------------
@@ -204,12 +202,23 @@ async function ensureWallet(): Promise<Address> {
 }
 
 // --- Merchant signer (self-hosted backend) ---------------------------------
+// The merchant frontend computes the order amount and posts the order fields to
+// its own signer; merchant/receiver default to the signer's address server-side.
 // Push (A/B) call this ahead of time; pull (C) calls it at pay time.
-async function signViaBackend(items: Record<string, number>): Promise<OrderEnvelope> {
+function cartAmount(): bigint {
+  return PRODUCTS.reduce(
+    (sum, p) => sum + parseUnits(p.price, TUSDT_DECIMALS) * BigInt(qty[p.id]),
+    0n,
+  )
+}
+
+async function signViaBackend(): Promise<OrderEnvelope> {
+  const amount = cartAmount()
+  if (amount <= 0n) throw new Error('empty cart')
   const res = await fetch(`${SIGNER_URL}/sign`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ amount: amount.toString(), token: TUSDT }),
   })
   const json = (await res.json().catch(() => null)) as {
     code: string
@@ -275,7 +284,7 @@ async function selectMode(next: Mode) {
   if (mode === 'C') {
     // Pull: sign on demand at pay time with the live cart.
     setStatus('st_ready_C')
-    mountCommon({ createOrder: () => signViaBackend(cartItems()) })
+    mountCommon({ createOrder: () => signViaBackend() })
     return
   }
 
@@ -286,7 +295,7 @@ async function selectMode(next: Mode) {
   }
   setStatus('st_signing')
   try {
-    const env = await signViaBackend(cartItems())
+    const env = await signViaBackend()
     if (mode === 'A') {
       const href = buildPayLink(env)
       const link = $('#paylink')
