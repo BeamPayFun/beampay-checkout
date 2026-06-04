@@ -47,22 +47,22 @@ const STR: Record<string, Entry> = {
   },
   faucet_bnb: { en: 'Get tBNB (gas) ↗', zh: '领取 tBNB（gas）↗' },
   modes_title: { en: 'Choose integration mode', zh: '选择集成模式' },
-  mA_ttl: { en: 'Inline', zh: '内联' },
-  mA_sub: { en: 'Own site, fixed price', zh: '自有站，定价固定' },
-  mB_ttl: { en: 'Pay link', zh: '支付链接' },
-  mB_sub: { en: 'Share / invoice / QR', zh: '分享 / 发票 / 二维码' },
+  mA_ttl: { en: 'Pay link', zh: '支付链接' },
+  mA_sub: { en: 'Share / invoice / QR', zh: '分享 / 发票 / 二维码' },
+  mB_ttl: { en: 'Inline', zh: '内联' },
+  mB_sub: { en: 'Own site, fixed price', zh: '自有站，定价固定' },
   mC_ttl: { en: 'Callback', zh: '回调' },
   mC_sub: { en: 'Cart, dynamic price', zh: '购物车，动态价' },
   no_backend: { en: 'no always-on backend', zh: '无需常驻后端' },
   needs_backend: { en: 'needs /sign backend', zh: '需 /sign 后端' },
   pay_title: { en: 'Pay', zh: '支付' },
   hint_A: {
-    en: 'Push: the merchant pre-signs a fixed-price order server-side and hands the envelope straight to BeamPay.init({ order }). The cart is locked.',
-    zh: 'Push：商户在后端对固定价订单预签名，把 envelope 直接传给 BeamPay.init({ order })。购物车已锁定。',
-  },
-  hint_B: {
     en: 'Push: the merchant signs once, packs the envelope into a flat-query pay link, and shares it. BeamPay.fromLink(href) parses it — no backend for the payer.',
     zh: 'Push：商户签一次，把 envelope 打包进扁平 query 支付链接并分享。BeamPay.fromLink(href) 解析它——付款方无需后端。',
+  },
+  hint_B: {
+    en: 'Push: the merchant pre-signs a fixed-price order server-side and hands the envelope straight to BeamPay.init({ order }). The cart is locked.',
+    zh: 'Push：商户在后端对固定价订单预签名，把 envelope 直接传给 BeamPay.init({ order })。购物车已锁定。',
   },
   hint_C: {
     en: 'Pull: edit the cart, then click Pay. BeamPay calls createOrder() → your /sign backend computes the price and signs on demand. The buyer wallet only signs pay().',
@@ -75,8 +75,8 @@ const STR: Record<string, Entry> = {
   st_cart_empty: { en: 'Cart is empty — add an item first.', zh: '购物车为空，请先加购商品。' },
   st_signing: { en: 'Merchant backend signing order…', zh: '商户后端签署订单中…' },
   st_signer_fail: { en: (e) => `Signer error: ${e}`, zh: (e) => `签名器错误: ${e}` },
-  st_ready_A: { en: 'Pre-signed order ready — click Pay.', zh: '预签名订单就绪——点击支付。' },
-  st_ready_B: { en: 'Pay link generated — click Pay.', zh: '支付链接已生成——点击支付。' },
+  st_ready_A: { en: 'Pay link generated — click Pay.', zh: '支付链接已生成——点击支付。' },
+  st_ready_B: { en: 'Pre-signed order ready — click Pay.', zh: '预签名订单就绪——点击支付。' },
   st_ready_C: { en: 'Edit the cart, then click Pay.', zh: '修改购物车后点击支付。' },
   st_paid: { en: (tx) => `Paid ✓  tx: ${tx}`, zh: (tx) => `支付成功 ✓  tx: ${tx}` },
   st_pay_error: { en: (m) => `Payment error: ${m}`, zh: (m) => `支付错误: ${m}` },
@@ -288,14 +288,14 @@ async function selectMode(next: Mode) {
   try {
     const env = await signViaBackend(cartItems())
     if (mode === 'A') {
-      mountCommon({ order: env })
-      setStatus('st_ready_A', '', 'ok')
-    } else {
       const href = buildPayLink(env)
       const link = $('#paylink')
       link.classList.remove('empty')
       link.textContent = href
       mountCommon({ link: href })
+      setStatus('st_ready_A', '', 'ok')
+    } else {
+      mountCommon({ order: env })
       setStatus('st_ready_B', '', 'ok')
     }
   } catch (err) {

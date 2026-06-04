@@ -9,8 +9,8 @@ widget never signs, and BeamPay holds zero keys.
 
 | Mode | Flow | What the demo does |
 |---|---|---|
-| **A · Inline** | push | Pre-signs the current cart via the signer backend, hands the envelope to `BeamPay.init({ order })`. Cart locked. |
-| **B · Pay link** | push | Signs once, packs the envelope into a flat-query pay link, mounts via `BeamPay.fromLink(href)`. |
+| **A · Pay link** | push | Signs once, packs the envelope into a flat-query pay link, mounts via `BeamPay.fromLink(href)`. |
+| **B · Inline** | push | Pre-signs the current cart via the signer backend, hands the envelope to `BeamPay.init({ order })`. Cart locked. |
 | **C · Callback** | pull | Cart stays editable; `BeamPay.init({ createOrder })` calls the signer `/sign` at pay time with the live cart. |
 
 In all three the buyer wallet only signs `pay()`; the widget polls `getOrder()`
@@ -46,11 +46,11 @@ End-to-end:
 ```ts
 import { BeamPay } from '@beampay/checkout'
 
-// Mode A — inline pre-signed envelope
-BeamPay.init({ order: signedEnvelope, decimals: 6, symbol: 'tUSDT' }).mount('#pay')
-
-// Mode B — a beampay-web pay link
+// Mode A — a beampay-web pay link
 BeamPay.fromLink(href, { decimals: 6, symbol: 'tUSDT' }).mount('#pay')
+
+// Mode B — inline pre-signed envelope
+BeamPay.init({ order: signedEnvelope, decimals: 6, symbol: 'tUSDT' }).mount('#pay')
 
 // Mode C — sign on demand from your backend
 BeamPay.init({
