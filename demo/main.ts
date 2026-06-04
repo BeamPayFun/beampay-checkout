@@ -211,8 +211,15 @@ async function signViaBackend(items: Record<string, number>): Promise<OrderEnvel
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ items }),
   })
-  if (!res.ok) throw new Error(`signer ${res.status}`)
-  return (await res.json()) as OrderEnvelope
+  const json = (await res.json().catch(() => null)) as {
+    code: string
+    msg: string
+    data: OrderEnvelope | null
+  } | null
+  if (!res.ok || json?.code !== '000000000' || !json.data) {
+    throw new Error(json?.msg ?? `signer ${res.status}`)
+  }
+  return json.data
 }
 
 // Pack an envelope into the same flat-query pay link beampay-web /create emits.
