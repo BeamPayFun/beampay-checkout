@@ -15,6 +15,8 @@ const TUSDT = '0x0c6DfFCbb941d2fDec9c8107e8128dcb6651951c' as Address
 const TUSDT_DECIMALS = 6
 const TUSDT_SYMBOL = 'tUSDT'
 const CHAIN = 'bsc-testnet' as const
+// Demo merchant = the demo-signer's own burner address (signer == merchant == receiver).
+const MERCHANT = '0x5ec880094B0A166ba305f7CC9eA1AB519b70a626' as Address
 
 // Self-hosted merchant signer (see examples/demo-signer in beampay-libs).
 // Deployed at demo-signer.beampay.fun; for a local signer set VITE_SIGNER_URL=http://localhost:8787.
@@ -218,7 +220,12 @@ async function signViaBackend(): Promise<OrderEnvelope> {
   const res = await fetch(`${SIGNER_URL}/sign`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ amount: amount.toString(), token: TUSDT }),
+    body: JSON.stringify({
+      amount: amount.toString(),
+      token: TUSDT,
+      merchant: MERCHANT,
+      receiver: MERCHANT,
+    }),
   })
   const json = (await res.json().catch(() => null)) as {
     code: string
