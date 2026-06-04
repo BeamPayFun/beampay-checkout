@@ -258,7 +258,14 @@ function buildPayLink(env: OrderEnvelope): string {
 
 // --- Mode handling ---------------------------------------------------------
 type Mode = 'A' | 'B' | 'C'
-let mode: Mode = 'C'
+
+// Initial mode from ?mode=a/b/c (case-insensitive); falls back to C.
+function initialMode(): Mode {
+  const m = new URLSearchParams(location.search).get('mode')?.toUpperCase()
+  return m === 'A' || m === 'B' || m === 'C' ? m : 'C'
+}
+
+let mode: Mode = initialMode()
 
 const DISPLAY = { decimals: TUSDT_DECIMALS, symbol: TUSDT_SYMBOL }
 
@@ -343,4 +350,4 @@ $('#lang-toggle').addEventListener('click', toggleLang)
 for (const el of Array.from(document.querySelectorAll<HTMLElement>('.mode'))) {
   el.addEventListener('click', () => void selectMode(el.dataset.mode as Mode))
 }
-void selectMode('C')
+void selectMode(mode)
