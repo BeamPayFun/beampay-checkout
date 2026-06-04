@@ -56,7 +56,7 @@ const STR: Record<string, Entry> = {
   mB_sub: { en: 'Own site, fixed price', zh: '自有站，定价固定' },
   mC_ttl: { en: 'Callback', zh: '回调' },
   mC_sub: { en: 'Cart, dynamic price', zh: '购物车，动态价' },
-  no_backend: { en: 'no backend at pay time', zh: '支付时无需后端' },
+  no_backend: { en: 'no backend', zh: '无需后端' },
   needs_backend: { en: 'needs backend signing', zh: '依赖后端签名' },
   pay_title: { en: 'Pay', zh: '支付' },
   hint_A: {
