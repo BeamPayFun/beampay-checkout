@@ -47,7 +47,7 @@
     "typescript": "^5.7",
     "vite": "^6",
     "vite-plugin-dts": "^4",
-    "vitest": "^2"
+    "vitest": "^3"
   },
   "engines": {
     "node": ">=20"

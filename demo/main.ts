@@ -253,7 +253,7 @@ function buildPayLink(env: OrderEnvelope): string {
     sig: env.signature,
     feeBps: String(env.feeBps),
   })
-  return `https://app.beampay.fun/pay?${q.toString()}`
+  return `https://beampay.fun/pay?${q.toString()}`
 }
 
 // --- Mode handling ---------------------------------------------------------

@@ -32,7 +32,7 @@ function buildLink(e: OrderEnvelope): string {
     sig: e.signature,
     feeBps: String(e.feeBps),
   })
-  return `https://app.beampay.fun/pay?${q.toString()}`
+  return `https://beampay.fun/pay?${q.toString()}`
 }
 
 describe('parsePayLink', () => {
